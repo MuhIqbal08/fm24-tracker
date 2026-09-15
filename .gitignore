@@ -1,0 +1,28 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+server/server
+server/server.exe
+
+# Database files
+*.db
+*.db-wal
+*.db-shm
+data/
+
+# Exports drop folder
+exports/*.html
+exports/*.htm
+
+# Test artifacts
+*.test
+*.out
+
+
+Phase1.txt
+Phase2.txt
+Phase3.txt
+PRD.md
