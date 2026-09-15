@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS player_snapshots (
     wage_weekly REAL DEFAULT 0,
     market_value REAL DEFAULT 0,
     status TEXT,
+    squad_category TEXT DEFAULT 'FIRST_TEAM',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(snapshot_id, player_id)
 );

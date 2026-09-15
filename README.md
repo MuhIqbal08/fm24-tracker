@@ -18,7 +18,13 @@ Aplikasi ini membaca file HTML hasil ekspor bawaan FM24, menghitung selisih CA s
    - **PROMOTE:** Untuk pemain muda berusia 21 tahun ke bawah dengan kenaikan CA cepat (+4 atau lebih).
    - **MAINTAIN:** Perkembangan normal untuk rotasi skuad utama.
 4. **Grafik Perkembangan Pemain:** Menampilkan kurva perjalanan CA dari waktu ke waktu serta batas Potential Ability (PA) menggunakan grafik garis interaktif.
-5. **Local-First:** Database SQLite tersimpan di komputer lokal, ringan dan tidak membebani performa PC saat game berjalan.
+5. **Segmentasi Skuad via Sidebar Navigation:**
+   - **All Squad (`/`):** Menampilkan seluruh pemain tim tanpa batasan umur.
+   - **Senior Team (`/senior`):** Menyoroti pemain usia 21+ tahun, kartu rata-rata gaji, dan kandidat jual.
+   - **Under-20s (`/u20`):** Menyoroti pemain muda usia 19-20 tahun dalam masa transisi dan evaluasi pinjaman (loan).
+   - **Under-18s (`/u18`):** Menyoroti pemain akademi usia 18 tahun ke bawah dengan lonjakan CA pesat (Wonderkid Spike) dan Potential Ability tinggi (PA ≥ 150).
+   - **Sell Candidates (`/transfer-list`):** Daftar ringkasan khusus seluruh pemain yang harus segera dijual sebelum nilai pasarnya merosot.
+6. **Local-First:** Database SQLite tersimpan di komputer lokal, ringan dan tidak membebani performa PC saat game berjalan.
 
 ---
 

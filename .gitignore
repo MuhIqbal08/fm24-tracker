@@ -6,6 +6,7 @@
 *.dylib
 server/server
 server/server.exe
+server/exports/*
 
 # Database files
 *.db
@@ -25,4 +26,5 @@ exports/*.htm
 Phase1.txt
 Phase2.txt
 Phase3.txt
+Phase4.txt
 PRD.md

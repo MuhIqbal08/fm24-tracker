@@ -25,7 +25,8 @@ export interface ComparisonItem {
   wage_weekly?: number;
   market_value: number;
   status?: string;
-  recommendation: "MUST SELL" | "WONDERKID SPIKE" | "CONSIDER LOAN / SELL" | "CORE / MAINTAIN" | string;
+  squad_category?: string;
+  recommendation: "SELL" | "MUST SELL" | "WONDERKID SPIKE" | "PROMOTE" | "CONSIDER LOAN / SELL" | "MONITOR/LOAN" | "CORE / MAINTAIN" | "MAINTAIN" | string;
   recommendation_reason: string;
 }
 
@@ -36,6 +37,7 @@ export interface PlayerHistoryEntry {
   ca: number;
   pa: number;
   age: number;
+  squad_category?: string;
   market_value: number;
 }
 
@@ -63,11 +65,15 @@ export async function fetchSnapshots(): Promise<Snapshot[]> {
 
 export async function fetchSquadComparison(
   baseId?: number,
-  targetId?: number
+  targetId?: number,
+  category?: string
 ): Promise<ComparisonItem[]> {
   const params = new URLSearchParams();
   if (baseId !== undefined) params.set("base_snapshot_id", baseId.toString());
   if (targetId !== undefined) params.set("target_snapshot_id", targetId.toString());
+  if (category && category !== "all" && category !== "sell-candidates") {
+    params.set("category", category);
+  }
 
   const url = `${API_BASE_URL}/squad/comparison${params.toString() ? `?${params.toString()}` : ""}`;
   const res = await fetch(url, { cache: "no-store" });

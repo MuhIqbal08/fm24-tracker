@@ -39,5 +39,11 @@ func NewDB(dbPath string) (*DB, error) {
 		return nil, fmt.Errorf("failed to run database migrations: %w", err)
 	}
 
+	// Idempotent column additions for existing databases
+	_, _ = database.Exec("ALTER TABLE player_snapshots ADD COLUMN squad_category TEXT DEFAULT 'FIRST_TEAM';")
+	_, _ = database.Exec("UPDATE player_snapshots SET squad_category = 'U18' WHERE age <= 18 AND (squad_category IS NULL OR squad_category = 'FIRST_TEAM');")
+	_, _ = database.Exec("UPDATE player_snapshots SET squad_category = 'U20' WHERE age >= 19 AND age <= 20 AND (squad_category IS NULL OR squad_category = 'FIRST_TEAM');")
+	_, _ = database.Exec("UPDATE player_snapshots SET squad_category = 'SENIOR' WHERE age >= 21 AND (squad_category IS NULL OR squad_category = 'FIRST_TEAM');")
+
 	return &DB{DB: database}, nil
 }

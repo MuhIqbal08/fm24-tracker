@@ -215,6 +215,32 @@ func TestAPIFullWorkflow(t *testing.T) {
 		t.Errorf("Nelson comparison mismatch: DeltaCA=%d, Rec=%s", nelson.DeltaCA, nelson.Recommendation)
 	}
 
+	// Test category=senior (Partey: 31, Nelson: 24)
+	reqSenior := httptest.NewRequest("GET", "/api/v1/squad/comparison?base_snapshot_id=1&target_snapshot_id=2&category=senior", nil)
+	recSenior := httptest.NewRecorder()
+	router.ServeHTTP(recSenior, reqSenior)
+	if recSenior.Code != http.StatusOK {
+		t.Fatalf("senior comparison failed: %d", recSenior.Code)
+	}
+	var compSenior []models.ComparisonItem
+	_ = json.Unmarshal(recSenior.Body.Bytes(), &compSenior)
+	if len(compSenior) != 2 {
+		t.Errorf("expected 2 senior players, got %d", len(compSenior))
+	}
+
+	// Test category=u18 (Nwaneri: 17)
+	reqU18 := httptest.NewRequest("GET", "/api/v1/squad/comparison?base_snapshot_id=1&target_snapshot_id=2&category=u18", nil)
+	recU18 := httptest.NewRecorder()
+	router.ServeHTTP(recU18, reqU18)
+	if recU18.Code != http.StatusOK {
+		t.Fatalf("u18 comparison failed: %d", recU18.Code)
+	}
+	var compU18 []models.ComparisonItem
+	_ = json.Unmarshal(recU18.Body.Bytes(), &compU18)
+	if len(compU18) != 1 || compU18[0].Name != "Ethan Nwaneri" {
+		t.Errorf("expected 1 U18 player (Nwaneri), got %+v", compU18)
+	}
+
 	// 5. Test GET /api/v1/players/{id}/history
 	playerID := partey.PlayerID
 	reqHistory := httptest.NewRequest("GET", fmt.Sprintf("/api/v1/players/%d/history", playerID), nil)

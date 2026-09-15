@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"fm-tracker/server/internal/models"
 )
@@ -71,15 +72,16 @@ func (d *DB) CreateSnapshot(ctx context.Context, parsed *models.ParsedSnapshot) 
 	defer upsertPlayerStmt.Close()
 
 	insertPlayerSnapshotStmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO player_snapshots (snapshot_id, player_id, age, ca, pa, wage_weekly, market_value, status)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO player_snapshots (snapshot_id, player_id, age, ca, pa, wage_weekly, market_value, status, squad_category)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(snapshot_id, player_id) DO UPDATE SET
 			age = excluded.age,
 			ca = excluded.ca,
 			pa = excluded.pa,
 			wage_weekly = excluded.wage_weekly,
 			market_value = excluded.market_value,
-			status = excluded.status
+			status = excluded.status,
+			squad_category = excluded.squad_category
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare insert player snapshot statement: %w", err)
@@ -97,6 +99,17 @@ func (d *DB) CreateSnapshot(ctx context.Context, parsed *models.ParsedSnapshot) 
 			return nil, fmt.Errorf("failed to upsert player %s (UID: %s): %w", p.Name, p.FMUniqueID, err)
 		}
 
+		squadCat := p.SquadCategory
+		if squadCat == "" {
+			if p.Age <= 18 {
+				squadCat = "U18"
+			} else if p.Age <= 20 {
+				squadCat = "U20"
+			} else {
+				squadCat = "FIRST_TEAM"
+			}
+		}
+
 		_, err = insertPlayerSnapshotStmt.ExecContext(ctx,
 			snapshotID,
 			playerID,
@@ -106,6 +119,7 @@ func (d *DB) CreateSnapshot(ctx context.Context, parsed *models.ParsedSnapshot) 
 			p.WageWeekly,
 			p.MarketValue,
 			p.Status,
+			squadCat,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert snapshot record for player %s: %w", p.Name, err)
@@ -214,23 +228,34 @@ func (d *DB) GetSnapshotByID(ctx context.Context, id int64) (*models.Snapshot, e
 
 // RawComparisonRow holds raw comparison query results before rule calculations.
 type RawComparisonRow struct {
-	PlayerID    int64
-	FMUniqueID  string
-	Name        string
-	Position    string
-	Age         int
-	BaseCA      int
-	TargetCA    int
-	DeltaCA     int
-	BasePA      int
-	TargetPA    int
-	WageWeekly  float64
-	MarketValue float64
-	Status      string
+	PlayerID      int64
+	FMUniqueID    string
+	Name          string
+	Position      string
+	Age           int
+	SquadCategory string
+	BaseCA        int
+	TargetCA      int
+	DeltaCA       int
+	BasePA        int
+	TargetPA      int
+	WageWeekly    float64
+	MarketValue   float64
+	Status        string
 }
 
-// GetRawComparisonData retrieves player attributes comparing base snapshot and target snapshot.
-func (d *DB) GetRawComparisonData(ctx context.Context, baseSnapshotID, targetSnapshotID int64) ([]RawComparisonRow, error) {
+// GetRawComparisonData retrieves player attributes comparing base snapshot and target snapshot with optional category filter.
+func (d *DB) GetRawComparisonData(ctx context.Context, baseSnapshotID, targetSnapshotID int64, category string) ([]RawComparisonRow, error) {
+	categoryFilter := ""
+	switch strings.ToLower(strings.TrimSpace(category)) {
+	case "senior":
+		categoryFilter = " AND ((tps.squad_category = 'SENIOR') OR (tps.squad_category = 'FIRST_TEAM' AND tps.age >= 21) OR (tps.age >= 21))"
+	case "u20":
+		categoryFilter = " AND ((tps.squad_category IN ('U20', 'U21')) OR (tps.age >= 19 AND tps.age <= 20))"
+	case "u18":
+		categoryFilter = " AND ((tps.squad_category = 'U18') OR (tps.age <= 18))"
+	}
+
 	query := `
 		SELECT 
 			p.id AS player_id,
@@ -238,6 +263,7 @@ func (d *DB) GetRawComparisonData(ctx context.Context, baseSnapshotID, targetSna
 			p.name,
 			COALESCE(p.preferred_position, '') AS position,
 			tps.age,
+			COALESCE(tps.squad_category, 'FIRST_TEAM') AS squad_category,
 			COALESCE(bps.ca, tps.ca) AS base_ca,
 			tps.ca AS target_ca,
 			(tps.ca - COALESCE(bps.ca, tps.ca)) AS delta_ca,
@@ -249,7 +275,7 @@ func (d *DB) GetRawComparisonData(ctx context.Context, baseSnapshotID, targetSna
 		FROM player_snapshots tps
 		JOIN players p ON p.id = tps.player_id
 		LEFT JOIN player_snapshots bps ON bps.player_id = tps.player_id AND bps.snapshot_id = ?
-		WHERE tps.snapshot_id = ?
+		WHERE tps.snapshot_id = ?` + categoryFilter + `
 		ORDER BY delta_ca DESC, p.name ASC
 	`
 	rows, err := d.QueryContext(ctx, query, baseSnapshotID, targetSnapshotID)
@@ -267,6 +293,7 @@ func (d *DB) GetRawComparisonData(ctx context.Context, baseSnapshotID, targetSna
 			&r.Name,
 			&r.Position,
 			&r.Age,
+			&r.SquadCategory,
 			&r.BaseCA,
 			&r.TargetCA,
 			&r.DeltaCA,
@@ -309,6 +336,7 @@ func (d *DB) GetPlayerHistory(ctx context.Context, playerID int64) (*models.Play
 			ps.ca,
 			ps.pa,
 			ps.age,
+			COALESCE(ps.squad_category, 'FIRST_TEAM'),
 			ps.market_value
 		FROM player_snapshots ps
 		JOIN snapshots s ON s.id = ps.snapshot_id
@@ -331,6 +359,7 @@ func (d *DB) GetPlayerHistory(ctx context.Context, playerID int64) (*models.Play
 			&entry.CA,
 			&entry.PA,
 			&entry.Age,
+			&entry.SquadCategory,
 			&entry.MarketValue,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan player history entry: %w", err)

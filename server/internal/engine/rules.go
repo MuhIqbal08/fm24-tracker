@@ -56,6 +56,7 @@ func BuildComparison(rows []db.RawComparisonRow) []models.ComparisonItem {
 			Name:                 r.Name,
 			Position:             r.Position,
 			Age:                  r.Age,
+			SquadCategory:        r.SquadCategory,
 			BaseCA:               r.BaseCA,
 			TargetCA:             r.TargetCA,
 			DeltaCA:              r.DeltaCA,

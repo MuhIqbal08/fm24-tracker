@@ -162,6 +162,8 @@ func (p *Parser) extractHeaders(tr *goquery.Selection) map[string]int {
 			headerMap["value"] = idx
 		case text == "inf" || text == "info" || text == "status":
 			headerMap["status"] = idx
+		case text == "squad" || text == "team" || text == "squad status" || text == "squad / team" || strings.Contains(text, "squad_category"):
+			headerMap["squad"] = idx
 		}
 	})
 	return headerMap
@@ -185,6 +187,7 @@ func (p *Parser) parsePlayerRow(cells *goquery.Selection, headerMap map[string]i
 	wageStr := getText("wage")
 	valStr := getText("value")
 	status := getText("status")
+	squadStr := getText("squad")
 
 	// If no UID is available, generate a stable fallback UID based on name and nationality
 	if uid == "" && name != "" {
@@ -196,19 +199,42 @@ func (p *Parser) parsePlayerRow(cells *goquery.Selection, headerMap map[string]i
 	pa := parseNumber(paStr)
 	wage := parseCurrency(wageStr)
 	val := parseCurrency(valStr)
+	squadCategory := determineSquadCategory(squadStr, age)
 
 	return models.ParsedPlayer{
-		FMUniqueID:  uid,
-		Name:        name,
-		Nationality: nat,
-		Position:    pos,
-		Age:         age,
-		CA:          ca,
-		PA:          pa,
-		WageWeekly:  wage,
-		MarketValue: val,
-		Status:      status,
+		FMUniqueID:    uid,
+		Name:          name,
+		Nationality:   nat,
+		Position:      pos,
+		Age:           age,
+		CA:            ca,
+		PA:            pa,
+		WageWeekly:    wage,
+		MarketValue:   val,
+		Status:        status,
+		SquadCategory: squadCategory,
 	}
+}
+
+func determineSquadCategory(squadStr string, age int) string {
+	s := strings.ToUpper(strings.TrimSpace(squadStr))
+	if strings.Contains(s, "U18") || strings.Contains(s, "UNDER 18") || strings.Contains(s, "UNDER-18") || strings.Contains(s, "YOUTH") {
+		return "U18"
+	}
+	if strings.Contains(s, "U20") || strings.Contains(s, "UNDER 20") || strings.Contains(s, "UNDER-20") || strings.Contains(s, "U21") || strings.Contains(s, "RESERVE") {
+		return "U20"
+	}
+	if strings.Contains(s, "FIRST") || strings.Contains(s, "SENIOR") || strings.Contains(s, "MAIN") {
+		return "SENIOR"
+	}
+	// Fallback to dynamic age calculation
+	if age <= 18 {
+		return "U18"
+	}
+	if age <= 20 {
+		return "U20"
+	}
+	return "SENIOR"
 }
 
 func cleanText(s string) string {

@@ -169,7 +169,8 @@ func (h *Handler) SquadComparison(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	rawRows, err := h.db.GetRawComparisonData(r.Context(), baseID, targetID)
+	category := r.URL.Query().Get("category")
+	rawRows, err := h.db.GetRawComparisonData(r.Context(), baseID, targetID, category)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to calculate comparison: %v", err))
 		return

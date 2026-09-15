@@ -26,30 +26,32 @@ type Snapshot struct {
 
 // PlayerSnapshot represents a player's attributes at a specific snapshot.
 type PlayerSnapshot struct {
-	ID          int64     `json:"id"`
-	SnapshotID  int64     `json:"snapshot_id"`
-	PlayerID    int64     `json:"player_id"`
-	Age         int       `json:"age"`
-	CA          int       `json:"ca"`
-	PA          int       `json:"pa"`
-	WageWeekly  float64   `json:"wage_weekly"`
-	MarketValue float64   `json:"market_value"`
-	Status      string    `json:"status,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID            int64     `json:"id"`
+	SnapshotID    int64     `json:"snapshot_id"`
+	PlayerID      int64     `json:"player_id"`
+	Age           int       `json:"age"`
+	CA            int       `json:"ca"`
+	PA            int       `json:"pa"`
+	WageWeekly    float64   `json:"wage_weekly"`
+	MarketValue   float64   `json:"market_value"`
+	Status        string    `json:"status,omitempty"`
+	SquadCategory string    `json:"squad_category"` // 'FIRST_TEAM' (or 'SENIOR'), 'U20', 'U18'
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 // ParsedPlayer holds the raw player attributes parsed from HTML export.
 type ParsedPlayer struct {
-	FMUniqueID  string  `json:"fm_unique_id"`
-	Name        string  `json:"name"`
-	Nationality string  `json:"nationality"`
-	Position    string  `json:"position"`
-	Age         int     `json:"age"`
-	CA          int     `json:"ca"`
-	PA          int     `json:"pa"`
-	WageWeekly  float64 `json:"wage_weekly"`
-	MarketValue float64 `json:"market_value"`
-	Status      string  `json:"status"`
+	FMUniqueID    string  `json:"fm_unique_id"`
+	Name          string  `json:"name"`
+	Nationality   string  `json:"nationality"`
+	Position      string  `json:"position"`
+	Age           int     `json:"age"`
+	CA            int     `json:"ca"`
+	PA            int     `json:"pa"`
+	WageWeekly    float64 `json:"wage_weekly"`
+	MarketValue   float64 `json:"market_value"`
+	Status        string  `json:"status"`
+	SquadCategory string  `json:"squad_category"`
 }
 
 // ParsedSnapshot holds the parsed snapshot metadata and player list.
@@ -69,6 +71,7 @@ type ComparisonItem struct {
 	Name                 string  `json:"name"`
 	Position             string  `json:"position"`
 	Age                  int     `json:"age"`
+	SquadCategory        string  `json:"squad_category"`
 	BaseCA               int     `json:"base_ca"`
 	TargetCA             int     `json:"target_ca"`
 	DeltaCA              int     `json:"delta_ca"`
@@ -83,13 +86,14 @@ type ComparisonItem struct {
 
 // PlayerHistoryEntry represents a single historical point for a player.
 type PlayerHistoryEntry struct {
-	SnapshotID   int64   `json:"snapshot_id"`
-	SnapshotDate string  `json:"snapshot_date"`
-	Season       string  `json:"season"`
-	CA           int     `json:"ca"`
-	PA           int     `json:"pa"`
-	Age          int     `json:"age"`
-	MarketValue  float64 `json:"market_value"`
+	SnapshotID    int64   `json:"snapshot_id"`
+	SnapshotDate  string  `json:"snapshot_date"`
+	Season        string  `json:"season"`
+	CA            int     `json:"ca"`
+	PA            int     `json:"pa"`
+	Age           int     `json:"age"`
+	SquadCategory string  `json:"squad_category,omitempty"`
+	MarketValue   float64 `json:"market_value"`
 }
 
 // PlayerHistoryResponse is the API response for player historical progression.
