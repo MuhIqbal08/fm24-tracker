@@ -41,6 +41,9 @@ func NewDB(dbPath string) (*DB, error) {
 
 	// Idempotent column additions for existing databases
 	_, _ = database.Exec("ALTER TABLE player_snapshots ADD COLUMN squad_category TEXT DEFAULT 'FIRST_TEAM';")
+	_, _ = database.Exec("ALTER TABLE player_snapshots ADD COLUMN starts INTEGER DEFAULT 0;")
+	_, _ = database.Exec("ALTER TABLE player_snapshots ADD COLUMN subs INTEGER DEFAULT 0;")
+	_, _ = database.Exec("ALTER TABLE player_snapshots ADD COLUMN mins INTEGER DEFAULT 0;")
 	_, _ = database.Exec("UPDATE player_snapshots SET squad_category = 'U18' WHERE age <= 18 AND (squad_category IS NULL OR squad_category = 'FIRST_TEAM');")
 	_, _ = database.Exec("UPDATE player_snapshots SET squad_category = 'U20' WHERE age >= 19 AND age <= 20 AND (squad_category IS NULL OR squad_category = 'FIRST_TEAM');")
 	_, _ = database.Exec("UPDATE player_snapshots SET squad_category = 'SENIOR' WHERE age >= 21 AND (squad_category IS NULL OR squad_category = 'FIRST_TEAM');")

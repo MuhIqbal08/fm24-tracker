@@ -11,6 +11,13 @@ export interface Snapshot {
   created_at: string;
 }
 
+export interface AppearanceStats {
+  starts: number;
+  subs: number;
+  total_apps: number;
+  mins: number;
+}
+
 export interface ComparisonItem {
   player_id: number;
   fm_unique_id: string;
@@ -28,6 +35,9 @@ export interface ComparisonItem {
   squad_category?: string;
   recommendation: "SELL" | "MUST SELL" | "WONDERKID SPIKE" | "PROMOTE" | "CONSIDER LOAN / SELL" | "MONITOR/LOAN" | "CORE / MAINTAIN" | "MAINTAIN" | string;
   recommendation_reason: string;
+  status_recommendation?: string;
+  status_reason?: string;
+  appearance_detail?: AppearanceStats;
 }
 
 export interface PlayerHistoryEntry {
@@ -38,6 +48,7 @@ export interface PlayerHistoryEntry {
   pa: number;
   age: number;
   squad_category?: string;
+  appearances?: AppearanceStats;
   market_value: number;
 }
 

@@ -60,12 +60,23 @@ export function PlayerChartModal({ player, open, onOpenChange }: PlayerChartModa
                   UID: {player.fm_unique_id}
                 </Badge>
               </div>
-              <DialogDescription className="mt-1 flex items-center gap-3">
+              <DialogDescription className="mt-1 flex flex-wrap items-center gap-2 text-xs">
                 <span className="font-medium text-slate-300">{player.position}</span>
                 <span>•</span>
                 <span>{player.age} Tahun</span>
                 <span>•</span>
                 <span className="text-slate-300">Valuasi: {formatCurrency(player.market_value)}</span>
+                {player.appearance_detail && (
+                  <>
+                    <span>•</span>
+                    <span className="text-emerald-400 font-mono">
+                      {player.appearance_detail.subs > 0
+                        ? `${player.appearance_detail.starts} (${player.appearance_detail.subs})`
+                        : `${player.appearance_detail.starts}`}{" "}
+                      · {player.appearance_detail.mins.toLocaleString()}&apos;
+                    </span>
+                  </>
+                )}
               </DialogDescription>
             </div>
 
@@ -176,28 +187,26 @@ export function PlayerChartModal({ player, open, onOpenChange }: PlayerChartModa
               </div>
 
               {/* Status and reason banner */}
-              <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/50 p-3.5 flex items-center justify-between">
+              <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/50 p-3.5 flex items-center justify-between gap-3">
                 <div>
                   <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider">
-                    Analisis & Rekomendasi
+                    Squad Status & Rekomendasi
                   </span>
                   <p className="text-sm font-medium text-slate-200 mt-0.5">
-                    {player.recommendation_reason}
+                    {player.status_reason || player.recommendation_reason}
                   </p>
                 </div>
                 <Badge
                   variant={
-                    player.recommendation === "SELL" || player.recommendation === "MUST SELL"
+                    (player.status_recommendation || player.recommendation || "").toUpperCase().includes("SELL")
                       ? "destructive"
-                      : player.recommendation === "PROMOTE" || player.recommendation === "WONDERKID SPIKE"
-                      ? "cyan"
-                      : player.recommendation === "MONITOR/LOAN" || player.recommendation === "CONSIDER LOAN / SELL"
+                      : (player.status_recommendation || player.recommendation || "").toUpperCase().includes("LOAN")
                       ? "warning"
                       : "secondary"
                   }
-                  className="text-xs px-2.5 py-1"
+                  className="text-xs px-2.5 py-1 whitespace-nowrap"
                 >
-                  {player.recommendation}
+                  {player.status_recommendation || player.recommendation}
                 </Badge>
               </div>
             </div>

@@ -160,6 +160,10 @@ func (p *Parser) extractHeaders(tr *goquery.Selection) map[string]int {
 			headerMap["wage"] = idx
 		case strings.Contains(text, "value") || strings.Contains(text, "transfer value"):
 			headerMap["value"] = idx
+		case text == "apps" || text == "app" || text == "appearances" || text == "apps_raw" || text == "apps (subs)" || text == "starts (subs)" || strings.Contains(text, "penampilan") || strings.Contains(text, "appearance"):
+			headerMap["apps"] = idx
+		case text == "mins" || text == "min" || text == "minutes" || text == "mins played" || strings.Contains(text, "menit"):
+			headerMap["mins"] = idx
 		case text == "inf" || text == "info" || text == "status":
 			headerMap["status"] = idx
 		case text == "squad" || text == "team" || text == "squad status" || text == "squad / team" || strings.Contains(text, "squad_category"):
@@ -188,6 +192,8 @@ func (p *Parser) parsePlayerRow(cells *goquery.Selection, headerMap map[string]i
 	valStr := getText("value")
 	status := getText("status")
 	squadStr := getText("squad")
+	appsRaw := getText("apps")
+	minsStr := getText("mins")
 
 	// If no UID is available, generate a stable fallback UID based on name and nationality
 	if uid == "" && name != "" {
@@ -200,6 +206,8 @@ func (p *Parser) parsePlayerRow(cells *goquery.Selection, headerMap map[string]i
 	wage := parseCurrency(wageStr)
 	val := parseCurrency(valStr)
 	squadCategory := determineSquadCategory(squadStr, age)
+	starts, subs, _ := parseAppearances(appsRaw)
+	mins := parseNumber(minsStr)
 
 	return models.ParsedPlayer{
 		FMUniqueID:    uid,
@@ -213,6 +221,10 @@ func (p *Parser) parsePlayerRow(cells *goquery.Selection, headerMap map[string]i
 		MarketValue:   val,
 		Status:        status,
 		SquadCategory: squadCategory,
+		AppsRaw:       appsRaw,
+		Starts:        starts,
+		Subs:          subs,
+		Mins:          mins,
 	}
 }
 
@@ -246,6 +258,7 @@ func cleanText(s string) string {
 }
 
 func parseNumber(s string) int {
+	s = strings.ReplaceAll(s, ",", "")
 	s = strings.TrimSpace(s)
 	if s == "" || s == "-" || s == "N/A" {
 		return 0
@@ -257,6 +270,30 @@ func parseNumber(s string) int {
 	}
 	val, _ := strconv.Atoi(match)
 	return val
+}
+
+// parseAppearances extracts starts, subs, and total from FM24 appearance strings like "9 (8)", "14", or "-".
+func parseAppearances(s string) (starts, subs, total int) {
+	s = strings.TrimSpace(s)
+	if s == "" || s == "-" || strings.EqualFold(s, "n/a") {
+		return 0, 0, 0
+	}
+	// Match format like "9 (8)"
+	re := regexp.MustCompile(`^(\d+)\s*\(\s*(\d+)\s*\)`)
+	matches := re.FindStringSubmatch(s)
+	if len(matches) == 3 {
+		st, _ := strconv.Atoi(matches[1])
+		sb, _ := strconv.Atoi(matches[2])
+		return st, sb, st + sb
+	}
+	// Match format like "14"
+	reSingle := regexp.MustCompile(`^(\d+)`)
+	matchesSingle := reSingle.FindStringSubmatch(s)
+	if len(matchesSingle) == 2 {
+		st, _ := strconv.Atoi(matchesSingle[1])
+		return st, 0, st
+	}
+	return 0, 0, 0
 }
 
 // parseCurrency converts strings like "£150,000 p/w", "€15M", "£35M - £45M", "€500K", "150000" into float64.

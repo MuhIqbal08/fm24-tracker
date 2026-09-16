@@ -72,8 +72,8 @@ func (d *DB) CreateSnapshot(ctx context.Context, parsed *models.ParsedSnapshot) 
 	defer upsertPlayerStmt.Close()
 
 	insertPlayerSnapshotStmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO player_snapshots (snapshot_id, player_id, age, ca, pa, wage_weekly, market_value, status, squad_category)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO player_snapshots (snapshot_id, player_id, age, ca, pa, wage_weekly, market_value, status, squad_category, starts, subs, mins)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(snapshot_id, player_id) DO UPDATE SET
 			age = excluded.age,
 			ca = excluded.ca,
@@ -81,7 +81,10 @@ func (d *DB) CreateSnapshot(ctx context.Context, parsed *models.ParsedSnapshot) 
 			wage_weekly = excluded.wage_weekly,
 			market_value = excluded.market_value,
 			status = excluded.status,
-			squad_category = excluded.squad_category
+			squad_category = excluded.squad_category,
+			starts = excluded.starts,
+			subs = excluded.subs,
+			mins = excluded.mins
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare insert player snapshot statement: %w", err)
@@ -120,6 +123,9 @@ func (d *DB) CreateSnapshot(ctx context.Context, parsed *models.ParsedSnapshot) 
 			p.MarketValue,
 			p.Status,
 			squadCat,
+			p.Starts,
+			p.Subs,
+			p.Mins,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert snapshot record for player %s: %w", p.Name, err)
@@ -242,6 +248,9 @@ type RawComparisonRow struct {
 	WageWeekly    float64
 	MarketValue   float64
 	Status        string
+	Starts        int
+	Subs          int
+	Mins          int
 }
 
 // GetRawComparisonData retrieves player attributes comparing base snapshot and target snapshot with optional category filter.
@@ -271,7 +280,10 @@ func (d *DB) GetRawComparisonData(ctx context.Context, baseSnapshotID, targetSna
 			tps.pa AS target_pa,
 			tps.wage_weekly,
 			tps.market_value,
-			COALESCE(tps.status, '') AS status
+			COALESCE(tps.status, '') AS status,
+			COALESCE(tps.starts, 0) AS starts,
+			COALESCE(tps.subs, 0) AS subs,
+			COALESCE(tps.mins, 0) AS mins
 		FROM player_snapshots tps
 		JOIN players p ON p.id = tps.player_id
 		LEFT JOIN player_snapshots bps ON bps.player_id = tps.player_id AND bps.snapshot_id = ?
@@ -302,6 +314,9 @@ func (d *DB) GetRawComparisonData(ctx context.Context, baseSnapshotID, targetSna
 			&r.WageWeekly,
 			&r.MarketValue,
 			&r.Status,
+			&r.Starts,
+			&r.Subs,
+			&r.Mins,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan comparison row: %w", err)
 		}
@@ -337,6 +352,9 @@ func (d *DB) GetPlayerHistory(ctx context.Context, playerID int64) (*models.Play
 			ps.pa,
 			ps.age,
 			COALESCE(ps.squad_category, 'FIRST_TEAM'),
+			COALESCE(ps.starts, 0),
+			COALESCE(ps.subs, 0),
+			COALESCE(ps.mins, 0),
 			ps.market_value
 		FROM player_snapshots ps
 		JOIN snapshots s ON s.id = ps.snapshot_id
@@ -352,6 +370,7 @@ func (d *DB) GetPlayerHistory(ctx context.Context, playerID int64) (*models.Play
 	var history []models.PlayerHistoryEntry
 	for rows.Next() {
 		var entry models.PlayerHistoryEntry
+		var starts, subs, mins int
 		if err := rows.Scan(
 			&entry.SnapshotID,
 			&entry.SnapshotDate,
@@ -360,9 +379,18 @@ func (d *DB) GetPlayerHistory(ctx context.Context, playerID int64) (*models.Play
 			&entry.PA,
 			&entry.Age,
 			&entry.SquadCategory,
+			&starts,
+			&subs,
+			&mins,
 			&entry.MarketValue,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan player history entry: %w", err)
+		}
+		entry.Appearances = models.AppearanceStats{
+			Starts: starts,
+			Subs:   subs,
+			Total:  starts + subs,
+			Mins:   mins,
 		}
 		history = append(history, entry)
 	}

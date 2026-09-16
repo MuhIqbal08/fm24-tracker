@@ -2,6 +2,14 @@ package models
 
 import "time"
 
+// AppearanceStats represents player match appearances and minutes played.
+type AppearanceStats struct {
+	Starts int `json:"starts"`
+	Subs   int `json:"subs"`
+	Total  int `json:"total_apps"`
+	Mins   int `json:"mins"`
+}
+
 // Player represents the master player record.
 type Player struct {
 	ID                int64     `json:"id"`
@@ -36,6 +44,9 @@ type PlayerSnapshot struct {
 	MarketValue   float64   `json:"market_value"`
 	Status        string    `json:"status,omitempty"`
 	SquadCategory string    `json:"squad_category"` // 'FIRST_TEAM' (or 'SENIOR'), 'U20', 'U18'
+	Starts        int       `json:"starts"`
+	Subs          int       `json:"subs"`
+	Mins          int       `json:"mins"`
 	CreatedAt     time.Time `json:"created_at"`
 }
 
@@ -52,6 +63,10 @@ type ParsedPlayer struct {
 	MarketValue   float64 `json:"market_value"`
 	Status        string  `json:"status"`
 	SquadCategory string  `json:"squad_category"`
+	AppsRaw       string  `json:"apps_raw"`
+	Starts        int     `json:"starts"`
+	Subs          int     `json:"subs"`
+	Mins          int     `json:"mins"`
 }
 
 // ParsedSnapshot holds the parsed snapshot metadata and player list.
@@ -66,34 +81,38 @@ type ParsedSnapshot struct {
 
 // ComparisonItem represents the comparison result for a player between two snapshots.
 type ComparisonItem struct {
-	PlayerID             int64   `json:"player_id"`
-	FMUniqueID           string  `json:"fm_unique_id"`
-	Name                 string  `json:"name"`
-	Position             string  `json:"position"`
-	Age                  int     `json:"age"`
-	SquadCategory        string  `json:"squad_category"`
-	BaseCA               int     `json:"base_ca"`
-	TargetCA             int     `json:"target_ca"`
-	DeltaCA              int     `json:"delta_ca"`
-	BasePA               int     `json:"base_pa"`
-	TargetPA             int     `json:"target_pa"`
-	WageWeekly           float64 `json:"wage_weekly,omitempty"`
-	MarketValue          float64 `json:"market_value"`
-	Status               string  `json:"status,omitempty"`
-	Recommendation       string  `json:"recommendation"`
-	RecommendationReason string  `json:"recommendation_reason"`
+	PlayerID             int64           `json:"player_id"`
+	FMUniqueID           string          `json:"fm_unique_id"`
+	Name                 string          `json:"name"`
+	Position             string          `json:"position"`
+	Age                  int             `json:"age"`
+	SquadCategory        string          `json:"squad_category"`
+	BaseCA               int             `json:"base_ca"`
+	TargetCA             int             `json:"target_ca"`
+	DeltaCA              int             `json:"delta_ca"`
+	BasePA               int             `json:"base_pa"`
+	TargetPA             int             `json:"target_pa"`
+	WageWeekly           float64         `json:"wage_weekly,omitempty"`
+	MarketValue          float64         `json:"market_value"`
+	Status               string          `json:"status,omitempty"`
+	Recommendation       string          `json:"recommendation"`
+	RecommendationReason string          `json:"recommendation_reason"`
+	StatusRecommendation string          `json:"status_recommendation"` // 'KEEP', 'LOAN', 'SELL'
+	StatusReason         string          `json:"status_reason"`
+	AppearanceDetail     AppearanceStats `json:"appearance_detail"`
 }
 
 // PlayerHistoryEntry represents a single historical point for a player.
 type PlayerHistoryEntry struct {
-	SnapshotID    int64   `json:"snapshot_id"`
-	SnapshotDate  string  `json:"snapshot_date"`
-	Season        string  `json:"season"`
-	CA            int     `json:"ca"`
-	PA            int     `json:"pa"`
-	Age           int     `json:"age"`
-	SquadCategory string  `json:"squad_category,omitempty"`
-	MarketValue   float64 `json:"market_value"`
+	SnapshotID    int64           `json:"snapshot_id"`
+	SnapshotDate  string          `json:"snapshot_date"`
+	Season        string          `json:"season"`
+	CA            int             `json:"ca"`
+	PA            int             `json:"pa"`
+	Age           int             `json:"age"`
+	SquadCategory string          `json:"squad_category,omitempty"`
+	Appearances   AppearanceStats `json:"appearances"`
+	MarketValue   float64         `json:"market_value"`
 }
 
 // PlayerHistoryResponse is the API response for player historical progression.

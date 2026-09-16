@@ -166,6 +166,7 @@ export function SquadDashboardView({
         onRefresh={handleRefresh}
         isRefreshing={isRefreshing}
         serverOnline={serverOnline}
+        title={headerTitle}
       />
 
       {/* Main Content Area */}

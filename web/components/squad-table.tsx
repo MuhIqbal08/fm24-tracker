@@ -43,22 +43,46 @@ export function SquadTable({ data, onSelectPlayer, isLoading }: SquadTableProps)
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
-  // Filter by recommendation category
+  // Calculate counts for quick filter tabs
+  const counts = useMemo(() => {
+    let sell = 0;
+    let loan = 0;
+    let keep = 0;
+    for (const item of data) {
+      const rec = (item.status_recommendation || item.recommendation || "").toUpperCase();
+      if (rec.includes("SELL")) {
+        sell++;
+      } else if (rec.includes("LOAN")) {
+        loan++;
+      } else {
+        keep++;
+      }
+    }
+    return { all: data.length, sell, loan, keep };
+  }, [data]);
+
+  // Filter by squad decision status
   const filteredData = useMemo(() => {
     if (statusFilter === "ALL") return data;
     if (statusFilter === "SELL") {
-      return data.filter((item) => item.recommendation === "SELL" || item.recommendation === "MUST SELL");
+      return data.filter((item) => {
+        const s = (item.status_recommendation || item.recommendation || "").toUpperCase();
+        return s.includes("SELL");
+      });
     }
-    if (statusFilter === "PROMOTE") {
-      return data.filter((item) => item.recommendation === "PROMOTE" || item.recommendation === "WONDERKID SPIKE");
+    if (statusFilter === "LOAN") {
+      return data.filter((item) => {
+        const s = (item.status_recommendation || item.recommendation || "").toUpperCase();
+        return s.includes("LOAN");
+      });
     }
-    if (statusFilter === "MONITOR/LOAN") {
-      return data.filter((item) => item.recommendation === "MONITOR/LOAN" || item.recommendation === "CONSIDER LOAN / SELL");
+    if (statusFilter === "KEEP") {
+      return data.filter((item) => {
+        const s = (item.status_recommendation || item.recommendation || "").toUpperCase();
+        return !s.includes("SELL") && !s.includes("LOAN");
+      });
     }
-    if (statusFilter === "MAINTAIN") {
-      return data.filter((item) => item.recommendation === "MAINTAIN" || item.recommendation === "CORE / MAINTAIN");
-    }
-    return data.filter((item) => item.recommendation === statusFilter);
+    return data;
   }, [data, statusFilter]);
 
   const columns = useMemo<ColumnDef<ComparisonItem>[]>(
@@ -218,6 +242,52 @@ export function SquadTable({ data, onSelectPlayer, isLoading }: SquadTableProps)
         ),
       },
       {
+        id: "apps_mins",
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="-ml-3 h-8 text-xs font-semibold text-slate-300 hover:text-white"
+          >
+            Apps (Mins)
+            {column.getIsSorted() === "asc" ? (
+              <ArrowUp className="ml-1.5 h-3.5 w-3.5 text-emerald-400" />
+            ) : column.getIsSorted() === "desc" ? (
+              <ArrowDown className="ml-1.5 h-3.5 w-3.5 text-emerald-400" />
+            ) : (
+              <ArrowUpDown className="ml-1.5 h-3.5 w-3.5 opacity-40" />
+            )}
+          </Button>
+        ),
+        sortingFn: (rowA, rowB) => {
+          const minsA = rowA.original.appearance_detail?.mins ?? 0;
+          const minsB = rowB.original.appearance_detail?.mins ?? 0;
+          return minsA - minsB;
+        },
+        cell: ({ row }) => {
+          const app = row.original.appearance_detail;
+          const starts = app?.starts ?? 0;
+          const subs = app?.subs ?? 0;
+          const mins = app?.mins ?? 0;
+          const total = app?.total_apps ?? (starts + subs);
+
+          const formattedMins = mins.toLocaleString();
+          const appsDisplay = subs > 0 ? `${starts} (${subs})` : `${starts}`;
+
+          return (
+            <div
+              className="inline-flex items-center gap-1.5 rounded-md bg-slate-800/80 px-2 py-1 text-xs font-mono font-medium text-slate-300 border border-slate-700/60 cursor-help"
+              title={`${starts} Starts, ${subs} Subs (${total} Total Apps) · ${formattedMins}' Menit Bermain`}
+            >
+              <span className="text-white font-semibold">{appsDisplay}</span>
+              <span className="text-slate-500">·</span>
+              <span className="text-emerald-400">{formattedMins}&apos;</span>
+            </div>
+          );
+        },
+      },
+      {
         accessorKey: "market_value",
         header: "Valuasi",
         cell: ({ row }) => (
@@ -227,25 +297,36 @@ export function SquadTable({ data, onSelectPlayer, isLoading }: SquadTableProps)
         ),
       },
       {
-        accessorKey: "recommendation",
-        header: "Rec. Action",
+        accessorKey: "status_recommendation",
+        header: "Action",
         cell: ({ row }) => {
-          const rec = row.original.recommendation;
-          const variant =
-            rec === "SELL" || rec === "MUST SELL"
-              ? "destructive"
-              : rec === "PROMOTE" || rec === "WONDERKID SPIKE"
-              ? "cyan"
-              : rec === "MONITOR/LOAN" || rec === "CONSIDER LOAN / SELL"
-              ? "warning"
-              : "secondary";
+          const rec = row.original.status_recommendation || row.original.recommendation || "KEEP";
+          const reason = row.original.status_reason || row.original.recommendation_reason || "";
+
+          const recUpper = rec.toUpperCase();
+          const isSell = recUpper.includes("SELL");
+          const isLoan = recUpper.includes("LOAN");
+
+          let badgeClass = "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+          if (isSell) {
+            badgeClass = "bg-rose-500/15 text-rose-400 border-rose-500/30";
+          } else if (isLoan) {
+            badgeClass = "bg-amber-500/15 text-amber-400 border-amber-500/30";
+          }
 
           return (
             <div className="flex flex-col items-start gap-1">
-              <Badge variant={variant}>{rec}</Badge>
-              <span className="text-[11px] text-slate-500 line-clamp-1 max-w-[200px]" title={row.original.recommendation_reason}>
-                {row.original.recommendation_reason}
+              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border ${badgeClass}`}>
+                {rec}
               </span>
+              {reason && (
+                <span
+                  className="text-[11px] text-slate-400 line-clamp-1 max-w-[210px]"
+                  title={reason}
+                >
+                  {reason}
+                </span>
+              )}
             </div>
           );
         },
@@ -309,24 +390,33 @@ export function SquadTable({ data, onSelectPlayer, isLoading }: SquadTableProps)
             <Filter className="h-3.5 w-3.5" /> Filter:
           </span>
           {[
-            { label: "Semua", value: "ALL" },
-            { label: "Sell", value: "SELL" },
-            { label: "Promote", value: "PROMOTE" },
-            { label: "Monitor / Loan", value: "MONITOR/LOAN" },
-            { label: "Maintain", value: "MAINTAIN" },
-          ].map((item) => (
-            <button
-              key={item.value}
-              onClick={() => setStatusFilter(item.value)}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
-                statusFilter === item.value
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white"
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
+            { label: "All", value: "ALL", count: counts.all },
+            { label: "Sell Candidates", value: "SELL", count: counts.sell, badgeColor: "text-rose-400" },
+            { label: "Need Loan", value: "LOAN", count: counts.loan, badgeColor: "text-amber-400" },
+            { label: "Keep", value: "KEEP", count: counts.keep, badgeColor: "text-emerald-400" },
+          ].map((item) => {
+            const isActive = statusFilter === item.value;
+            return (
+              <button
+                key={item.value}
+                onClick={() => setStatusFilter(item.value)}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer border ${
+                  isActive
+                    ? "bg-slate-700 text-white border-slate-600 shadow-sm"
+                    : "bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border-slate-800"
+                }`}
+              >
+                <span>{item.label}</span>
+                <span
+                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                    isActive ? "bg-slate-900 text-slate-200" : "bg-slate-900/80 " + (item.badgeColor || "text-slate-400")
+                  }`}
+                >
+                  {item.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 

@@ -50,6 +50,9 @@ func BuildComparison(rows []db.RawComparisonRow) []models.ComparisonItem {
 	items := make([]models.ComparisonItem, 0, len(rows))
 	for _, r := range rows {
 		rec, reason := EvaluatePlayer(r.Age, r.DeltaCA)
+		totalApps := r.Starts + r.Subs
+		statusRec, statusReason := EvaluateSquadStatus(r.Age, r.TargetPA, r.TargetCA, r.DeltaCA, r.Starts, r.Subs, totalApps, r.Mins)
+
 		item := models.ComparisonItem{
 			PlayerID:             r.PlayerID,
 			FMUniqueID:           r.FMUniqueID,
@@ -67,6 +70,14 @@ func BuildComparison(rows []db.RawComparisonRow) []models.ComparisonItem {
 			Status:               r.Status,
 			Recommendation:       rec,
 			RecommendationReason: reason,
+			StatusRecommendation: statusRec,
+			StatusReason:         statusReason,
+			AppearanceDetail: models.AppearanceStats{
+				Starts: r.Starts,
+				Subs:   r.Subs,
+				Total:  totalApps,
+				Mins:   r.Mins,
+			},
 		}
 		items = append(items, item)
 	}
